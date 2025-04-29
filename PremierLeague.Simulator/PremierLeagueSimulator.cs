@@ -1,32 +1,13 @@
 using System.Collections.Concurrent;
+using System.Net.Http;
+using System.Text.Json;
 
 namespace PremierLeague.Simulator;
 
 public class PremierLeagueSimulator
 {
-    private static readonly Dictionary<string, List<string>> TeamSquads = new()
-    {
-        ["Arsenal"] = new() { "Ramsdale", "White", "Saliba", "Gabriel", "Zinchenko", "Partey", "Odegaard", "Saka", "Martinelli", "Jesus", "Trossard" },
-        ["Aston Villa"] = new() { "Martinez", "Cash", "Konsa", "Mings", "Digne", "Luiz", "McGinn", "Bailey", "Buendia", "Watkins", "Coutinho" },
-        ["Bournemouth"] = new() { "Travers", "Smith", "Mepham", "Kelly", "Zemura", "Lerma", "Cook", "Billing", "Christie", "Solanke", "Brooks" },
-        ["Brentford"] = new() { "Raya", "Jansson", "Pinnock", "Ajer", "Henry", "Norgaard", "Jensen", "Canos", "Mbeumo", "Toney", "Wissa" },
-        ["Brighton"] = new() { "Sanchez", "Veltman", "Dunk", "Webster", "Estupinan", "Caicedo", "Mac Allister", "March", "Mitoma", "Trossard", "Welbeck" },
-        ["Burnley"] = new() { "Muric", "Roberts", "Beyer", "Harwood-Bellis", "Maatsen", "Cullen", "Brownhill", "Gudmundsson", "Zaroury", "Rodriguez", "Barnes" },
-        ["Chelsea"] = new() { "Kepa", "James", "Silva", "Badiashile", "Chilwell", "Kante", "Enzo", "Mount", "Sterling", "Havertz", "Felix" },
-        ["Crystal Palace"] = new() { "Guaita", "Ward", "Andersen", "Guehi", "Mitchell", "Doucoure", "Eze", "Olise", "Ayew", "Zaha", "Edouard" },
-        ["Everton"] = new() { "Pickford", "Coleman", "Tarkowski", "Coady", "Mykolenko", "Gueye", "Onana", "Iwobi", "McNeil", "Gray", "Calvert-Lewin" },
-        ["Fulham"] = new() { "Leno", "Tete", "Adarabioyo", "Ream", "Robinson", "Palhinha", "Reed", "Pereira", "Wilson", "Mitrovic", "Willian" },
-        ["Liverpool"] = new() { "Alisson", "Alexander-Arnold", "Van Dijk", "Konate", "Robertson", "Fabinho", "Thiago", "Henderson", "Salah", "Nunez", "Diaz" },
-        ["Luton Town"] = new() { "Horvath", "Bree", "Lockyer", "Bradley", "Bell", "Campbell", "Clark", "Berry", "Morris", "Adebayo", "Cornick" },
-        ["Man City"] = new() { "Ederson", "Walker", "Dias", "Laporte", "Cancelo", "Rodri", "De Bruyne", "Bernardo", "Mahrez", "Haaland", "Foden" },
-        ["Man United"] = new() { "De Gea", "Dalot", "Varane", "Martinez", "Shaw", "Casemiro", "Fernandes", "Eriksen", "Sancho", "Rashford", "Weghorst" },
-        ["Newcastle"] = new() { "Pope", "Trippier", "Botman", "Schar", "Burn", "Bruno", "Willock", "Longstaff", "Almiron", "Wilson", "Isak" },
-        ["Nottingham Forest"] = new() { "Henderson", "Williams", "Worrall", "Niakhate", "Toffolo", "Yates", "Freuler", "Johnson", "Lingard", "Awoniyi", "Gibbs-White" },
-        ["Sheffield United"] = new() { "Foderingham", "Bogle", "Egan", "Ahmedhodzic", "Lowe", "Norwood", "Berge", "Fleck", "Ndiaye", "McBurnie", "Sharp" },
-        ["Tottenham"] = new() { "Lloris", "Emerson", "Romero", "Dier", "Perisic", "Hojbjerg", "Bentancur", "Kulusevski", "Richarlison", "Kane", "Son" },
-        ["West Ham"] = new() { "Fabianski", "Coufal", "Zouma", "Aguerd", "Cresswell", "Rice", "Soucek", "Bowen", "Paqueta", "Benrahma", "Antonio" },
-        ["Wolves"] = new() { "Sa", "Semedo", "Collins", "Kilman", "Bueno", "Neves", "Moutinho", "Nunes", "Podence", "Cunha", "Jimenez" }
-    };
+    private readonly FplService _fplService;
+    private static readonly Dictionary<string, List<FplPlayer>> TeamSquads = new();
 
     private readonly ConcurrentDictionary<string, (int Points, int GoalsFor, int GoalsAgainst, int Wins, int Draws, int Losses)> _teamStats = new();
     private readonly ConcurrentDictionary<string, int> _playerGoals = new();
@@ -34,17 +15,33 @@ public class PremierLeagueSimulator
     private readonly ConcurrentDictionary<string, int> _playerRedCards = new();
     private readonly Random _random = new();
 
-    public PremierLeagueSimulator()
+    public PremierLeagueSimulator(FplService fplService)
     {
+        _fplService = fplService;
+    }
+
+    public async Task PrepareSeason()
+    {
+        await LoadTeamSquads();
+
         foreach (var team in TeamSquads.Keys)
         {
             _teamStats[team] = (0, 0, 0, 0, 0, 0);
             foreach (var player in TeamSquads[team])
             {
-                _playerGoals[player] = 0;
-                _playerYellowCards[player] = 0;
-                _playerRedCards[player] = 0;
+                _playerGoals[player.FullName] = 0;
+                _playerYellowCards[player.FullName] = 0;
+                _playerRedCards[player.FullName] = 0;
             }
+        }
+    }
+
+    private async Task LoadTeamSquads()
+    {
+        var teams = await _fplService.GetTeamsAsync();
+        foreach (var (id, team) in teams)
+        {
+            TeamSquads[team.Name] = team.Squad;
         }
     }
 
@@ -93,7 +90,7 @@ public class PremierLeagueSimulator
 
         for (int minute = 0; minute <= 90; minute++)
         {
-            Thread.Sleep(10);
+            Thread.Sleep(100);
 
             if (_random.Next(100) < 3)
             {
@@ -152,7 +149,10 @@ public class PremierLeagueSimulator
 
     private List<string> GetStartingLineup(string team)
     {
-        return TeamSquads[team].OrderBy(_ => _random.Next()).Take(11).ToList();
+        return TeamSquads[team].OrderBy(_ => _random.Next())
+            .Take(11)
+            .Select(p => p.FullName)
+            .ToList();
     }
 
     private void UpdateTeamStats(string home, string away, int homeGoals, int awayGoals)
@@ -220,5 +220,11 @@ public class PremierLeagueSimulator
         {
             Console.WriteLine($"{player.Key}: {player.Value} red cards");
         }
+    }
+
+    private class Player
+    {
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
     }
 }

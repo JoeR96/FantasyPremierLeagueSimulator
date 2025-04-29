@@ -1,0 +1,7 @@
+### Get all teams and players
+GET https://fantasy.premierleague.com/api/bootstrap-static/
+Accept: application/json
+
+### Get information about a specific team by ID (replace {team_id} with the desired team ID)
+GET https://fantasy.premierleague.com/api/bootstrap-static/
+Accept: application/json
