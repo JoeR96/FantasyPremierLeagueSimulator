@@ -1,12 +1,10 @@
 using System.Collections.Concurrent;
-using System.Net.Http;
-using System.Text.Json;
+using PremierLeague.Simulator.Features.Fpl;
 
 namespace PremierLeague.Simulator;
 
-public class PremierLeagueSimulator
+public class PremierLeagueSimulator(FplService fplService)
 {
-    private readonly FplService _fplService;
     private static readonly Dictionary<string, List<FplPlayer>> TeamSquads = new();
 
     private readonly ConcurrentDictionary<string, (int Points, int GoalsFor, int GoalsAgainst, int Wins, int Draws, int Losses)> _teamStats = new();
@@ -14,11 +12,6 @@ public class PremierLeagueSimulator
     private readonly ConcurrentDictionary<string, int> _playerYellowCards = new();
     private readonly ConcurrentDictionary<string, int> _playerRedCards = new();
     private readonly Random _random = new();
-
-    public PremierLeagueSimulator(FplService fplService)
-    {
-        _fplService = fplService;
-    }
 
     public async Task PrepareSeason()
     {
@@ -38,7 +31,7 @@ public class PremierLeagueSimulator
 
     private async Task LoadTeamSquads()
     {
-        var teams = await _fplService.GetTeamsAsync();
+        var teams = await fplService.GetTeamsAsync();
         foreach (var (id, team) in teams)
         {
             TeamSquads[team.Name] = team.Squad;

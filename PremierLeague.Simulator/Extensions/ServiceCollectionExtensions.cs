@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using PremierLeague.Simulator;
+using PremierLeague.Simulator.Features.Fpl;
 
 public static class ServiceCollectionExtensions
 {

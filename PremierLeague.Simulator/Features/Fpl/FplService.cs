@@ -1,21 +1,9 @@
 using System.Text.Json;
 
-public class FplService
+namespace PremierLeague.Simulator.Features.Fpl;
+
+public class FplService(HttpClient httpClient)
 {
-    private readonly HttpClient _httpClient;
-
-    public FplService(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
-    }
-
-    public async Task<string> GetDataAsync(string endpoint)
-    {
-        var response = await _httpClient.GetAsync(endpoint);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStringAsync();
-    }
-
     public async Task<Dictionary<string, FplTeam>> GetTeamsAsync()
     {
         var data = await GetDataAsync("https://fantasy.premierleague.com/api/bootstrap-static/");
@@ -38,8 +26,15 @@ public class FplService
 
         return result;
     }
-
-    public async Task<List<FplPlayer>> GetSquadAsync(int teamId)
+    
+    private async Task<string> GetDataAsync(string endpoint)
+    {
+        var response = await httpClient.GetAsync(endpoint);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync();
+    }
+    
+    private async Task<List<FplPlayer>> GetSquadAsync(int teamId)
     {
         var data = await GetDataAsync("https://fantasy.premierleague.com/api/bootstrap-static/");
         var jsonDoc = JsonDocument.Parse(data);

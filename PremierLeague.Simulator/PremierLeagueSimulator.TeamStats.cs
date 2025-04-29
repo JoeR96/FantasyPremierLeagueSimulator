@@ -1,6 +1,6 @@
 namespace PremierLeague.Simulator;
 
-public class TeamStats
+public record TeamStats
 {
     public int Points { get; set; }
     public int GoalsFor { get; set; }

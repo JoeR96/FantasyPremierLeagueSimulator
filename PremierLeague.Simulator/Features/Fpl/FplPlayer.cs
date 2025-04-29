@@ -1,4 +1,6 @@
-public class FplPlayer
+namespace PremierLeague.Simulator.Features.Fpl;
+
+public record FplPlayer
 {
     public int Id { get; set; }
     public string FirstName { get; set; } = string.Empty;
